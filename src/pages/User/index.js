@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import api from '../../services/api';
 
@@ -16,58 +16,54 @@ import {
   Author,
 } from './styles';
 
-export default class User extends Component {
-  static navigationOptions = ({ navigation }) => ({
-    title: navigation.getParam('user').name,
-  });
+export default function User({ route }) {
+  const [stars, setStars] = useState([]);
+  const { user } = route.params;
 
-  static propTypes = {
-    navigation: PropTypes.shape({
-      getParam: PropTypes.func,
-    }).isRequired,
-  };
+  useEffect(() => {
+    async function getUserData() {
+      const response = await api.get(`/users/${user.login}/starred`);
 
-  state = {
-    stars: [],
-  };
+      setStars(response.data);
+    }
 
-  async componentDidMount() {
-    const { navigation } = this.props;
-    const user = navigation.getParam('user');
+    getUserData();
+  }, []);
 
-    const response = await api.get(`/users/${user.login}/starred`);
+  return (
+    <Container>
+      <Header>
+        <Avatar source={{ uri: user.avatar }} />
+        <Name>{user.name}</Name>
+        <Bio>{user.bio}</Bio>
+      </Header>
 
-    this.setState({ stars: response.data });
-  }
-
-  render() {
-    const { navigation } = this.props;
-    const { stars } = this.state;
-
-    const user = navigation.getParam('user');
-
-    return (
-      <Container>
-        <Header>
-          <Avatar source={{ uri: user.avatar }} />
-          <Name>{user.name}</Name>
-          <Bio>{user.bio}</Bio>
-        </Header>
-
-        <Stars
-          data={stars}
-          keyExtractor={star => String(star.id)}
-          renderItem={({ item }) => (
-            <Starred>
-              <OwnerAvatar source={{ uri: item.owner.avatar_url }} />
-              <Info>
-                <Title>{item.name}</Title>
-                <Author>{item.owner.login}</Author>
-              </Info>
-            </Starred>
-          )}
-        />
-      </Container>
-    );
-  }
+      <Stars
+        data={stars}
+        keyExtractor={star => String(star.id)}
+        renderItem={({ item }) => (
+          <Starred>
+            <OwnerAvatar source={{ uri: item.owner.avatar_url }} />
+            <Info>
+              <Title>{item.name}</Title>
+              <Author>{item.owner.login}</Author>
+            </Info>
+          </Starred>
+        )}
+      />
+    </Container>
+  );
 }
+
+User.propTypes = {
+  route: PropTypes.shape({
+    params: PropTypes.shape({
+      user: PropTypes.shape({
+        login: PropTypes.string,
+        avatar: PropTypes.string,
+        name: PropTypes.string,
+        bio: PropTypes.string,
+      }),
+    }),
+  }).isRequired,
+};
